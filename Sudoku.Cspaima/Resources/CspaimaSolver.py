@@ -1,5 +1,5 @@
 from timeit import default_timer
-from constraint import Problem
+from constraint import Problem, AllDifferentConstraint
 
 #instance = [[0,0,0,0,9,4,0,3,0],
 #           [0,0,0,5,1,0,0,0,7],
@@ -13,38 +13,42 @@ from constraint import Problem
 
 
 def solve_sudoku_csp(grid):
+    sudoku_size = 9
+    block_size = 3
+
     problem = Problem()
-    
-    # Define variables
-    for i in range(9):
-        for j in range(9):
-            if grid[i][j] == 0:
-                problem.addVariable((i, j), range(1, 10))
-            else:
-                problem.addVariable((i, j), [grid[i][j]])
-    
-    # Define constraints
-    for i in range(9):
-        for j in range(9):
-            for k in range(j+1, 9):
-                problem.addConstraint(lambda x, y: x != y, [(i, j), (i, k)])
-                problem.addConstraint(lambda x, y: x != y, [(j, i), (k, i)])
-    
-    for i in range(0, 9, 3):
-        for j in range(0, 9, 3):
-            for k in range(3):
-                for l in range(3):
-                    for m in range(k+1, 3):
-                        for n in range(3):
-                            problem.addConstraint(lambda x, y: x != y, [(i+k, j+l), (i+m, j+n)])
-    
-    # Solve CSP
+
+    # Add variables for each cell
+    for i in range(sudoku_size):
+        for j in range(sudoku_size):
+            problem.addVariable((i, j), range(1, sudoku_size + 1))
+
+    # Add constraints for rows and columns
+    for i in range(sudoku_size):
+        problem.addConstraint(AllDifferentConstraint(), [(i, j) for j in range(sudoku_size)])  # All values in a row must be different
+        problem.addConstraint(AllDifferentConstraint(), [(j, i) for j in range(sudoku_size)])  # All values in a column must be different
+
+    # Add constraints for blocks
+    for i in range(block_size):
+        for j in range(block_size):
+            block_cells = [(r, c) for r in range(i * block_size, (i + 1) * block_size) for c in range(j * block_size, (j + 1) * block_size)]
+            problem.addConstraint(AllDifferentConstraint(), block_cells)  # All values in a block must be different
+
+    # Add constraints for given values
+    for i in range(sudoku_size):
+        for j in range(sudoku_size):
+            if grid[i][j] != 0:
+                problem.addConstraint(lambda var, val=grid[i][j]: var == val, [(i, j)])  # Assign given values
+
+    # Solve the Sudoku
     solution = problem.getSolution()
+
     if solution:
         result = [[solution[(i, j)] for j in range(9)] for i in range(9)]
         return True, result  # Indique qu'une solution a été trouvée et la renvoie
     else:
         return False, None  # Indique qu'aucune solution n'a été trouvée
+
 
 
 # Appel de la fonction pour résoudre le Sudoku
